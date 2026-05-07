@@ -1,0 +1,48 @@
+using System;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class BullyScrpit : MonoBehaviour
+{
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private String State="Patrol";
+
+    [SerializeField] private Transform player;
+    [SerializeField] private float detectionRange = 10f;
+    [SerializeField] private float maxRange =20f;
+    [SerializeField] private float speed =5f;
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        switch (State)
+        {
+            case "Patrol":
+
+                if (Vector3.Distance(transform.position, player.position) < detectionRange)
+                {
+                    State = "Chasing";
+                }
+                break;
+            case "Alert":
+                break;
+            case "Chasing":
+                Debug.Log("Chasing");
+                transform.position = Vector3.MoveTowards(transform.position, player.position, speed*Time.deltaTime);
+                if (Vector3.Distance(transform.position, player.position) > maxRange)
+                {
+                    State = "Patrol";
+                }
+                break;
+
+                
+            default:
+                break;
+
+        }
+    }
+}
