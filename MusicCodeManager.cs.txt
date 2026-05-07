@@ -1,0 +1,274 @@
+using UnityEngine;
+using TMPro;
+using UnityEngine.UI;
+using System.Collections.Generic;
+using System.Collections;
+using UnityEngine.SceneManagement;
+
+public class MusicCodeManager : MonoBehaviour
+{
+    public float duracion = 30f;
+    private float tiempoInicio;
+    private bool isPlaying = false;
+    private bool clicked = false;
+    private bool ClickedPanel = false;
+
+    public GameObject winPanel;
+    public GameObject losePanel;
+    public GameObject gamePanel;
+    public RawImage WrongImage;
+    public RawImage CorrectImage;
+    public TMP_Text timerText;
+    public List<TMP_Text> orderTexts;
+
+    public List<GameObject> sonidos;
+    public List<int> inputUsuario = new List<int>();
+    public List<int> correctOrder = new List<int>();
+
+    public AudioClip winSound;
+    public AudioClip loseSound;
+    public AudioClip backgroundMusic;
+    private AudioSource audioSource;
+    private enum GameState
+    {
+        Playing,
+        Won,
+        Lost
+    }
+    private GameState state;
+    private bool hasTriggered = false;
+    private bool hasWon = false;
+    private bool hasLost = false;
+
+
+    void Start()
+    {
+        Cursor.lockState = CursorLockMode.None; // desbloquea el cursor
+        Cursor.visible = true;
+        
+        gamePanel.SetActive(true);
+        winPanel.SetActive(false);
+        losePanel.SetActive(false);
+        WrongImage.enabled = false;
+        CorrectImage.enabled = false;
+        GenerateOrder();
+
+        tiempoInicio = Time.time;
+        isPlaying = true;
+        audioSource = GetComponent<AudioSource>();
+
+        state = GameState.Playing;
+
+    }
+
+    void Update()
+    {
+        if (!isPlaying) return;
+
+        float tiempoRestante = duracion - (Time.time - tiempoInicio);
+        timerText.text = "Tiempo: " + Mathf.CeilToInt(Mathf.Max(0, tiempoRestante));
+
+        if (audioSource.isPlaying == false)
+        {
+            audioSource.PlayOneShot(backgroundMusic);
+        }
+
+        if (tiempoRestante <= 0)
+        {
+            Lose();
+        }
+    }
+    void GenerateOrder()
+    {
+        correctOrder = new List<int>()
+        {
+          1, 2, 3, 4,
+            5, 6
+        };
+
+        for (int i = 0; i < 6; i++)
+        {
+            int temp = correctOrder[i];
+            int randomIndex = Random.Range(i, 6);
+            correctOrder[i] = correctOrder[randomIndex];
+            correctOrder[randomIndex] = temp;
+        }
+    }
+    public void ShowOrder()
+    {
+        if (clicked == false)
+        {
+            clicked = true;
+            StartCoroutine(ShowOrderCourtine());
+        }
+    }
+    private IEnumerator ShowOrderCourtine()
+    {
+        orderTexts[0].text = "";
+
+        for (int i = 0; i < correctOrder.Count; i++)
+        {
+            int isSilencio = Random.Range(1, 5);
+
+            if (isSilencio == 1)
+            {
+                orderTexts[0].text += "_";
+            }
+            else
+            {
+                SoundPaneles Tocar = null;
+                Debug.Log("Cantidad de sonidos: " + sonidos.Count);
+
+                foreach (GameObject obj in sonidos)
+                {
+                    SoundPaneles sp = obj.GetComponent<SoundPaneles>();
+                    Debug.Log("Buscando: " + correctOrder[i] + " vs " + sp.value);
+
+                    if (sp != null && sp.value == correctOrder[i])
+                    {
+                        Tocar = sp;
+                        sp.Play();
+                        break;
+                    }
+                }
+                orderTexts[0].text += "*"+correctOrder[i].ToString()+" ";
+                if (Tocar == null)
+                {
+                    Debug.LogError("NO SE ENCONTRO SONIDO PARA: " + correctOrder[i]);
+                }
+            }
+
+            yield return new WaitForSeconds(1f);
+        }
+        clicked = false;
+    }
+
+    public void OnButtonPressed(int value)
+    {
+        if (ClickedPanel == true)
+        {
+            return;
+        }
+        ClickedPanel = true;    
+        SoundPaneles pressed = null;
+
+        foreach (GameObject obj in sonidos)
+        {
+            SoundPaneles sp = obj.GetComponent<SoundPaneles>();
+
+            if (sp != null && sp.value == value)
+            {
+                pressed = sp;
+                sp.Play();
+                break;
+            }
+        }
+
+        if (pressed == null)
+        {
+            Debug.LogError("No button found with value: " + value);
+            return;
+        }
+
+        int index = inputUsuario.Count;
+
+        if (index >= correctOrder.Count)
+            return;
+
+        if (value == correctOrder[index])
+        {
+            inputUsuario.Add(value);
+            Debug.Log("Input count: " + inputUsuario.Count);
+
+            CorrectImage.enabled = true;
+            WrongImage.enabled = false;
+
+            CorrectImage.transform.position =
+                pressed.GetComponent<RectTransform>().position;
+
+            // ⏱ hide after 0.5 sec
+            Invoke(nameof(HideFeedback), 0.5f);
+
+            if (inputUsuario.Count == correctOrder.Count)
+            {
+                Win();
+            }
+        }
+        else
+        {
+            WrongImage.enabled = true;
+            CorrectImage.enabled = false;
+
+            WrongImage.transform.position =
+                pressed.GetComponent<RectTransform>().position;
+
+            inputUsuario.Clear();
+            Debug.Log("Input reset. Value was: " + correctOrder[index] + ", Value pressed: " + pressed.value);
+
+            Invoke(nameof(HideFeedback), 0.5f);
+        }
+        Invoke(nameof(UnlockInput), 0.2f);
+    }
+    void UnlockInput()
+    {
+        ClickedPanel = false;
+    }
+    void HideFeedback()
+    {
+        WrongImage.enabled = false;
+        CorrectImage.enabled = false;
+    }
+    
+    void Win()
+    {
+        if (hasWon) return; // 🔥 ADD THIS
+        if (hasTriggered) return; // 🔥 ADD THIS
+        if (state != GameState.Playing) return;
+        state = GameState.Won;
+        hasWon = true;
+        SceneMemory.Instance.Puzzle2=true;
+        audioSource.Stop();
+        audioSource.PlayOneShot(winSound);
+        isPlaying = false;
+        gamePanel.SetActive(false);
+        winPanel.SetActive(true);
+        Debug.Log("¡Ganaste!");
+    }
+
+    void Lose()
+    {
+        if (hasLost) return; // 🔥 ADD THIS
+        if(hasTriggered) return; // 🔥 ADD THIS
+        if (state != GameState.Playing) return;
+        state = GameState.Lost;
+        hasLost = true;
+        audioSource.Stop();
+        audioSource.PlayOneShot(loseSound);
+        isPlaying = false;
+        gamePanel.SetActive(false);
+        losePanel.SetActive(true);
+        Debug.Log("Perdiste");
+    }
+
+    public void ExitGame()
+    {
+        if (hasTriggered) return;
+        if (state == GameState.Playing)
+        {
+            state = GameState.Lost;
+            hasLost = true;
+            audioSource.Stop();
+            isPlaying = false;
+            gamePanel.SetActive(false);
+            losePanel.SetActive(false);
+            winPanel.SetActive(false);
+            Debug.Log("Saliste");
+        }
+        hasTriggered = true;
+
+        StopAllCoroutines();
+        SceneMemory.Instance.ReturnToMainWorld();
+
+    }
+
+}

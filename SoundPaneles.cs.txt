@@ -1,0 +1,32 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+public class SoundPaneles : MonoBehaviour
+{
+    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    public int value;
+    public AudioClip sound;
+
+    private AudioSource audioSource;
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+        GetComponent<Button>().onClick.AddListener(OnClick);
+    }
+
+    void OnClick()
+    {       
+        MusicCodeManager manager = FindAnyObjectByType<MusicCodeManager>();
+        if (manager != null)
+        {
+            manager.OnButtonPressed(value);
+        }
+    }
+
+
+    public void Play()
+    {
+        audioSource.PlayOneShot(sound);
+    }
+}
