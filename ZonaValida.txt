@@ -1,0 +1,20 @@
+using UnityEngine;
+
+public class ZonaValida : MonoBehaviour
+{
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Pieza"))
+        {
+            other.GetComponent<Pieza>().enCuadrante = true;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.CompareTag("Pieza"))
+        {
+            other.GetComponent<Pieza>().enCuadrante = false;
+        }
+    }
+}
